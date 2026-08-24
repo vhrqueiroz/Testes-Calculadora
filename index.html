@@ -80,6 +80,12 @@
       <button type="submit" style="margin-top: 10px; background: var(--blue); color: #fff; height: 46px;">ENTRAR</button>
     </form>
     <p id="loginError" style="color: #e0685a; margin-top: 14px; display: none; font-weight: 700;"></p>
+    <div style="margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px;">
+      <button type="button" id="guestBtn" style="width:100%; background: transparent; border: 1px solid var(--line); color: var(--muted); height: 42px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 13px;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--ink)'" onmouseout="this.style.borderColor='var(--line)';this.style.color='var(--muted)'">
+        🦇 Acesso para a Morcegada
+      </button>
+      <p style="color: var(--muted); font-size: 11px; margin-top: 8px; text-align: center;">Visualização somente leitura dos dados.</p>
+    </div>
   </div>
 </div>  
 <div id="homeScreen" class="home-screen" style="display:none">
@@ -332,7 +338,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     loading.style.display = 'none';
     
     if (isValid) {
-      // Se sucesso, esconde a tela de login e mostra a Home
+      // Login com sucesso: modo completo (edição liberada)
+      window.isReadOnly = false;
+      applyReadOnlyMode(false);
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('homeScreen').style.display = '';
     } else {
@@ -347,6 +355,50 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
   }
 });
 
+// ─── MODO VISITANTE (somente leitura) ────────────────────────────────────────
+
+// Controla o modo de acesso globalmente
+window.isReadOnly = false;
+
+/**
+ * Aplica ou remove o modo somente leitura na interface.
+ * Oculta/exibe os botões de adicionar e excluir em todas as coleções.
+ */
+function applyReadOnlyMode(readOnly) {
+  // Botões "+ Adicionar registro" das 3 coleções
+  ['openAddBtn', 'c-openAddBtn', 't-openAddBtn'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = readOnly ? 'none' : '';
+  });
+
+  // Botões de deletar e checkboxes gerados dinamicamente — controlados via CSS
+  var styleId = 'readOnlyStyle';
+  var existing = document.getElementById(styleId);
+  if (readOnly) {
+    if (!existing) {
+      var style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = '.delete-btn { display: none !important; } .row-check { pointer-events: none; opacity: 0.4; }';
+      document.head.appendChild(style);
+    }
+  } else {
+    if (existing) existing.remove();
+  }
+
+  // Botões "Desmarcar todos / Marcar todos"
+  ['toggleAllBtn', 'c-toggleAllBtn', 't-toggleAllBtn'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = readOnly ? 'none' : '';
+  });
+}
+
+// Handler do botão "Acessar como Visitante"
+document.getElementById('guestBtn').addEventListener('click', function() {
+  window.isReadOnly = true;
+  applyReadOnlyMode(true);
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('homeScreen').style.display = '';
+});
 
 </script>
 <div id="loadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:14px">

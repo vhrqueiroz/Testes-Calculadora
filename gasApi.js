@@ -1,5 +1,5 @@
 /* Integração com o Google Apps Script Web App. Arquivo em UTF-8. */
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyCLxcctfFeAKy2haDUhFHNeYvVjeHYyEFWZ3UKUm5B426zJTY6M5kNZEcuEs8UEVQW/exec";
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwHqJZqpX3sBqE3W-kSGQlc99ATAdSnjkNjc_K1Q8ng0j3GwFjGlFbPKbfFsUxFLMxO/exec";
 const GAS_SESSION_USER_KEY = "pokemon_tcg_logged_user";
 
 function setLoggedUser(usuario){ sessionStorage.setItem(GAS_SESSION_USER_KEY,String(usuario||'').trim()); }

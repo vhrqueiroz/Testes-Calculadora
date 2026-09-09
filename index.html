@@ -36,8 +36,9 @@
 .form-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);font-weight:700}
 .form-grid input,.form-grid select{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;outline:none}
 .form-grid input[readonly]{opacity:.65;cursor:not-allowed}
+.password-field{position:relative}.password-field input{width:100%;padding-right:44px}.password-toggle{position:absolute;right:6px;bottom:4px;width:34px;height:34px;padding:0;background:transparent;color:var(--muted);font-size:18px;line-height:1;border-radius:8px}.password-toggle:hover{background:transparent;color:var(--ink)}
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
-.secondary-btn{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 13px;font-weight:700;cursor:pointer;font:inherit}
+.secondary-btn{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 13px;font-weight:700;cursor:pointer;font:inherit}.password-field{position:relative}.password-field input{width:100%;padding-right:42px}.password-toggle{position:absolute;right:8px;bottom:4px;width:34px;height:34px;padding:0;border:0;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1}.password-toggle:hover{background:transparent;color:var(--ink)}.password-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:2px}.password-icon{width:16px;height:16px}
 @media(max-width:480px){.form-grid{grid-template-columns:1fr}}
 .home-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
 .home-inner{max-width:680px;width:100%;text-align:center}
@@ -75,9 +76,10 @@
         <label>USUÁRIO</label>
         <input type="text" id="loginUser" required style="background: var(--surface); color: var(--ink);">
       </div>
-      <div>
-        <label>SENHA</label>
+      <div class="password-field">
+        <label for="loginPass">SENHA</label>
         <input type="password" id="loginPass" required style="background: var(--surface); color: var(--ink);">
+        <button type="button" class="password-toggle" id="togglePassword" aria-label="Mostrar senha" title="Mostrar senha" aria-pressed="false"><svg class="password-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.5"></circle></svg></button>
       </div>
       <button type="submit" style="margin-top: 10px; background: var(--blue); color: #fff; height: 46px;">ENTRAR</button>
     </form>
@@ -328,6 +330,16 @@ function cRender(){const rows=c_rowsFor(),metricRows=rows.filter(d=>d['Incluir']
 c_initFilters();cRender();
 document.getElementById('pickCaos').addEventListener('click',async function(){showScreen('caosApp');await loadCollectionData("ME04 - Caos Ascendente",CAOS_DATA,function(){c_initFilters();cRender();});});
 document.getElementById('backFromCaos').addEventListener('click',function(){showScreen('homeScreen')});
+
+document.getElementById('togglePassword').addEventListener('click', function() {
+  const input = document.getElementById('loginPass');
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  this.innerHTML = showing ? '<svg class="password-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.5"></circle></svg>' : '<svg class="password-icon password-icon-slash" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="2.5"></circle><path d="m4 4 16 16"></path></svg>';
+  this.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
+  this.setAttribute('title', showing ? 'Mostrar senha' : 'Ocultar senha');
+  this.setAttribute('aria-pressed', String(!showing));
+});
 
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
   e.preventDefault();

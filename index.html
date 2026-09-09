@@ -77,7 +77,13 @@
       </div>
       <div>
         <label>SENHA</label>
-        <input type="password" id="loginPass" required style="background: var(--surface); color: var(--ink);">
+        <div style="position:relative;">
+          <input type="password" id="loginPass" required style="background:var(--surface);color:var(--ink);padding-right:64px;width:100%;">
+          <button type="button" id="togglePass" aria-label="Mostrar/ocultar senha" style="position:absolute;right:0;top:0;height:100%;width:60px;background:none;border:none;cursor:pointer;font-size:11px;font-weight:700;color:#888;padding:0;letter-spacing:.03em;">
+            <span id="eyeOpen">Mostrar</span>
+            <span id="eyeClosed" style="display:none;">Ocultar</span>
+          </button>
+        </div>
       </div>
       <button type="submit" style="margin-top: 10px; background: var(--blue); color: #fff; height: 46px;">ENTRAR</button>
     </form>
@@ -328,6 +334,16 @@ function cRender(){const rows=c_rowsFor(),metricRows=rows.filter(d=>d['Incluir']
 c_initFilters();cRender();
 document.getElementById('pickCaos').addEventListener('click',async function(){showScreen('caosApp');await loadCollectionData("ME04 - Caos Ascendente",CAOS_DATA,function(){c_initFilters();cRender();});});
 document.getElementById('backFromCaos').addEventListener('click',function(){showScreen('homeScreen')});
+
+document.getElementById('togglePass').addEventListener('click', function() {
+  var inp = document.getElementById('loginPass');
+  var open = document.getElementById('eyeOpen');
+  var closed = document.getElementById('eyeClosed');
+  var isHidden = inp.type === 'password';
+  inp.type = isHidden ? 'text' : 'password';
+  open.style.display = isHidden ? 'none' : 'block';
+  closed.style.display = isHidden ? 'block' : 'none';
+});
 
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
   e.preventDefault();

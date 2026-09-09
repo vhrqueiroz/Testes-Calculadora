@@ -18,7 +18,7 @@
  */
 
 // ⚠️  SUBSTITUA pela URL do seu Web App após o deploy no Google Apps Script
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyCLxcctfFeAKy2haDUhFHNeYvVjeHYyEFWZ3UKUm5B426zJTY6M5kNZEcuEs8UEVQW/exec";
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxICTwfMs21K_goaOLEDvQ1RpE0oOMyRIL-dxz8swtM4gIH0nFNVvUFSfbdDZqyKH3I/exec";
 
 // --------------------------------------------------------------------------
 // 1. LER registros de uma coleção (GET)

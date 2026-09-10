@@ -246,9 +246,14 @@ async function loadCollectionData(sheetName, dataArray, renderFn) {
   try {
     const records = await getRecords(sheetName);
 
-    // Limpa o array existente e popula com os dados da planilha
+    // Limpa o array existente e popula apenas com os registros do usuário logado
     dataArray.length = 0;
     records.forEach(function(r) {
+      // Filtra: exibe apenas registros cujo campo "Usuário" bate com o usuário da sessão.
+      // Registros sem "Usuário" preenchido não aparecem para nenhum usuário específico.
+      const registroUsuario = String(r["Usuário"] || "").trim();
+      if (_currentUser && registroUsuario !== _currentUser) return;
+
       // Converte campos numéricos (a planilha pode retornar como string)
       const numericFields = [
         "ID", "Total de Boosters", "Quantidade de Cartas", "Total de Cartas",
@@ -265,6 +270,7 @@ async function loadCollectionData(sheetName, dataArray, renderFn) {
       dataArray.push(r);
     });
 
+    console.log(`[GAS API] 👤 Exibindo ${dataArray.length} registro(s) para o usuário "${_currentUser}" em "${sheetName}".`);
     renderFn();
   } finally {
     setLoading(false);

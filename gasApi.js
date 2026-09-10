@@ -20,6 +20,17 @@
 // ⚠️  SUBSTITUA pela URL do seu Web App após o deploy no Google Apps Script
 const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxICTwfMs21K_goaOLEDvQ1RpE0oOMyRIL-dxz8swtM4gIH0nFNVvUFSfbdDZqyKH3I/exec";
 
+// Usuário autenticado na sessão atual (definido após login bem-sucedido)
+let _currentUser = null;
+
+/**
+ * Retorna o nome do usuário atualmente logado, ou null se não houver sessão.
+ * @returns {string|null}
+ */
+function getCurrentUser() {
+  return _currentUser;
+}
+
 // --------------------------------------------------------------------------
 // 1. LER registros de uma coleção (GET)
 // --------------------------------------------------------------------------
@@ -103,10 +114,16 @@ async function getRecords(sheetName) {
  *   }
  */
 async function addRecord(sheetName, recordData) {
+  // Cria uma cópia para não modificar o objeto original, e injeta o usuário logado
+  const dataComUsuario = Object.assign({}, recordData);
+  if (_currentUser) {
+    dataComUsuario["Usuário"] = _currentUser;
+  }
+
   const body = {
     action: "addRecord",
     sheetName: sheetName,
-    data: recordData,
+    data: dataComUsuario,
   };
 
   console.log(`[GAS API] POST addRecord → aba: "${sheetName}"`, recordData);
@@ -285,10 +302,29 @@ async function loginApp(usuario, senha) {
       alert("ERRO NO SERVIDOR: " + json.error);
     }
 
+    // Armazena o usuário logado para uso automático no addRecord
+    if (json.success) {
+      _currentUser = String(usuario).trim();
+      console.log(`[GAS API] ✅ Login bem-sucedido. Usuário da sessão: "${_currentUser}"`);
+    }
+
     return json.success;
 
   } catch (err) {
     console.error("[GAS API] ❌ Falha no login:", err);
     throw err;
   }
+}
+
+// --------------------------------------------------------------------------
+// 7. LOGOUT — limpa a sessão do usuário
+// --------------------------------------------------------------------------
+
+/**
+ * Encerra a sessão do usuário atual, limpando o nome armazenado.
+ * Chame esta função ao redirecionar para a tela de login.
+ */
+function logoutApp() {
+  console.log(`[GAS API] Sessão encerrada para o usuário "${_currentUser}".`);
+  _currentUser = null;
 }

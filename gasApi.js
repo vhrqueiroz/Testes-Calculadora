@@ -1,5 +1,5 @@
 /* Cliente da API do Pokémon TCG Dashboard. O token de sessão existe somente em memória. */
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwFzrPSjWJFyBiZDvtNwaHuez7hRcSqrcvI96Pd-8SVbBdM8licoId-2kDoJx---Q/exec";
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw2-KYtbgdWDhCD5c2Pzmllc7hSsBxFeGS5f7pkVX2-W_kZcC_d6LqXAwh5ySVoXDY/exec";
 let _currentUser = null;
 let _sessionToken = null;
 const _loadRequests = new WeakMap();
@@ -21,52 +21,63 @@ function _notifySessionExpired(message) {
   _clearSession();
   if (typeof window.onSessionExpired === "function") window.onSessionExpired(message || "Sessão expirada. Faça login novamente.");
 }
+const MAP_STORAGE_KEY = "pokemonTcgDashboard.mapeamento.v1";
+function _makeRequestId() {
+  const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "") : "req_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 14);
+  return /^[A-Za-z0-9_-]{8,64}$/.test(id) ? id : ("req_" + Date.now().toString(36) + "_fallback");
+}
+function _delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 async function _post(payload) {
-  let response;
-  try {
-    response = await fetch(GAS_WEB_APP_URL, {
-      method: "POST",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    });
-  } catch (networkError) {
-    const err = new Error("Falha de rede/CORS ao acessar o Web App. Confirme a URL /exec e as permissões da implantação.");
-    err.code = "REDE_OU_CORS";
-    throw err;
-  }
-  if (!response.ok) {
-    const status = response.status;
-    let destination = "";
+  const pauses = [600, 1500]; let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 30000) : null;
     try {
-      const host = new URL(response.url || GAS_WEB_APP_URL).hostname;
-      destination = host.endsWith("googleusercontent.com") ? " O redirect do Apps Script chegou ao host de resposta, mas retornou erro." : " A resposta veio do endpoint do Web App.";
-    } catch (ignored) {}
-    const detail = status === 404
-      ? "HTTP 404: recurso não encontrado." + destination + " Confirme que GAS_WEB_APP_URL é a URL /exec da implantação ativa; se publicou código novo, crie uma nova versão ou atualize a URL no gasApi.js. Falha de whitelist/aba costuma ser JSON de aplicação, não HTTP 404."
-      : "Erro HTTP " + status + " ao comunicar com o Web App." + destination + " Confira a implantação e tente novamente.";
-    const err = new Error(detail);
-    err.code = "HTTP_" + status;
-    throw err;
+      const response = await fetch(GAS_WEB_APP_URL, { method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload), signal: controller ? controller.signal : undefined });
+      if (!response.ok) {
+        const error = new Error(response.status === 404 ? "O servidor do Google não respondeu após várias tentativas. Verifique a conexão e a URL /exec da implantação." : "Erro HTTP " + response.status + " ao comunicar com o Web App.");
+        error.code = "HTTP_" + response.status; error.status = response.status; error.attempts = attempt + 1;
+        if (attempt < 2 && (response.status === 404 || response.status === 429 || response.status >= 500)) { lastError = error; await _delay(pauses[attempt]); continue; }
+        throw error;
+      }
+      let json;
+      try { json = await response.json(); } catch (parseError) {
+        const error = new Error("O Web App respondeu em formato não JSON."); error.code = "RESPOSTA_INVALIDA"; error.attempts = attempt + 1;
+        if (attempt < 2) { lastError = error; await _delay(pauses[attempt]); continue; } throw error;
+      }
+      if (!json || json.success !== true) {
+        let message = json && json.error ? json.error : "Não foi possível concluir a solicitação.";
+        const unknownAction = /Ação (?:POST|GET) desconhecida/i.test(message);
+        if (unknownAction) message += " O endpoint respondeu, mas a implantação não reconhece esta ação. Publique uma nova versão do Apps Script e confirme a URL /exec.";
+        const error = new Error(message); error.code = json && json.code ? json.code : (unknownAction ? "DEPLOYMENT_DESATUALIZADO" : "ERRO_SOLICITACAO"); error.attempts = attempt + 1;
+        if (error.code === "SESSAO_EXPIRADA") _notifySessionExpired(error.message); throw error;
+      }
+      return json;
+    } catch (caught) {
+      const error = caught instanceof Error ? caught : new Error(String(caught)); if (!error.attempts) error.attempts = attempt + 1;
+      const transient = error.name === "AbortError" || error instanceof TypeError || error.code === "RESPOSTA_INVALIDA" || (error.status === 404 || error.status === 429 || error.status >= 500);
+      if (attempt < 2 && transient) { lastError = error; await _delay(pauses[attempt]); continue; }
+      if (error.name === "AbortError") { error.code = "TIMEOUT"; error.message = "Tempo limite de 30 segundos excedido ao acessar o Web App."; }
+      if (error.status === 404) error.message = "O servidor do Google não respondeu após várias tentativas. Verifique a conexão e a URL /exec da implantação.";
+      if (error instanceof TypeError && !error.code) { error.code = "REDE_OU_CORS"; error.message = "Falha de rede/CORS após várias tentativas. Verifique a conexão e a implantação."; }
+      error.attempts = attempt + 1; throw error;
+    } finally { if (timer !== null) clearTimeout(timer); }
   }
-  let json;
+  throw lastError || new Error("Não foi possível acessar o Web App após várias tentativas.");
+}
+async function loadMapeamento() {
   try {
-    json = await response.json();
-  } catch (parseError) {
-    const err = new Error("O Web App respondeu em formato inesperado. Confirme que a URL /exec pertence à versão implantada atual e que doPost está publicado.");
-    err.code = "RESPOSTA_INVALIDA";
-    throw err;
-  }
-  if (!json || json.success !== true) {
-    let message = json && json.error ? json.error : "Não foi possível concluir a solicitação.";
-    const unknownAction = /Ação (?:POST|GET) desconhecida/i.test(message);
-    if (unknownAction) message += " O endpoint respondeu, mas a implantação não reconhece esta ação. Publique uma nova versão do Apps Script com o Codigo.gs.txt atual e confirme a URL /exec em GAS_WEB_APP_URL. Isso não é erro de nome de aba; confira a implantação antes de alterar os nomes.";
-    const err = new Error(message);
-    err.code = json && json.code ? json.code : (unknownAction ? "DEPLOYMENT_DESATUALIZADO" : "ERRO_SOLICITACAO");
-    if (err.code === "SESSAO_EXPIRADA") _notifySessionExpired(err.message);
-    throw err;
-  }
-  return json;
+    const result = await _post({ action: "getMapeamento" });
+    if (Array.isArray(result.data) && result.data.length) {
+      window.productMappingVersion = result.version || "";
+      try { localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify({ version: result.version || "", data: result.data })); } catch (storageError) {}
+      return result.data;
+    }
+  } catch (requestError) {}
+  try {
+    const saved = localStorage.getItem(MAP_STORAGE_KEY); if (saved) { const parsed = JSON.parse(saved); if (parsed && Array.isArray(parsed.data) && parsed.data.length) { window.productMappingVersion = parsed.version || ""; return parsed.data; } }
+  } catch (storageError) {}
+  return null;
 }
 async function getRecords(sheetName) {
   try {
@@ -83,7 +94,8 @@ async function addRecord(sheetName, recordData) {
     const data = Object.assign({}, recordData || {});
     delete data.ID;
     delete data["Usuário"];
-    const json = await _post({ action: "addRecord", sheetName: sheetName, data: data, token: _sessionToken });
+    const requestId = _makeRequestId();
+    const json = await _post({ action: "addRecord", sheetName: sheetName, data: data, token: _sessionToken, requestId: requestId });
     return json.id;
   } catch (err) {
     if (err.code === "SESSAO_EXPIRADA") _notifySessionExpired(err.message);
@@ -97,6 +109,7 @@ async function deleteRecord(sheetName, id) {
     return true;
   } catch (err) {
     if (err.code === "SESSAO_EXPIRADA") _notifySessionExpired(err.message);
+    if (err.code === "REGISTRO_NAO_ENCONTRADO" && err.attempts > 1) return true;
     _reportMutationError(err);
     return false;
   }
@@ -172,3 +185,5 @@ async function logoutApp() {
   try { if (token) await _post({ action: "logout", token: token }); } catch (err) { /* A limpeza local deve ocorrer mesmo se a rede falhar. */ }
   _clearSession();
 }
+
+window.loadMapeamento = loadMapeamento;

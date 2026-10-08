@@ -1,5 +1,5 @@
 /* Cliente da API do Pokémon TCG Dashboard. O token de sessão existe somente em memória. */
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw2-KYtbgdWDhCD5c2Pzmllc7hSsBxFeGS5f7pkVX2-W_kZcC_d6LqXAwh5ySVoXDY/exec";
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyJAsQWEYRNiJaq20jovoGoWe-8gUknhqTKMpo1y6XKHewHQ9xyqCQ0qU4XdCfo7mDf/exec";
 let _currentUser = null;
 let _sessionToken = null;
 const _loadRequests = new WeakMap();
@@ -7,11 +7,6 @@ let _loadRequestId = 0;
 const NUMERIC_FIELDS = ["ID", "Total de Boosters", "Quantidade de Cartas", "Total de Cartas", "Double Rare", "Ultra Rare", "Classic Rare", "Illustration Rare", "Special Illustration Rare", "Mega Hyper Rare", "Futuristic Rare", "Total"];
 
 function getCurrentUser() { return _currentUser; }
-function _normalizeIncluir(value) {
-  if (value === false || value === 0) return false;
-  if (value == null || value === "") return true;
-  return !["false", "0", "não", "nao"].includes(String(value).trim().toLowerCase());
-}
 function _clearSession() { _sessionToken = null; _currentUser = null; }
 function _reportMutationError(err) {
   window.lastApiError = err && err.message ? err.message : "Não foi possível concluir a alteração.";
@@ -114,16 +109,6 @@ async function deleteRecord(sheetName, id) {
     return false;
   }
 }
-async function updateIncluir(sheetName, id, incluir) {
-  try {
-    await _post({ action: "updateIncluir", sheetName: sheetName, id: id, incluir: !!incluir, token: _sessionToken });
-    return true;
-  } catch (err) {
-    if (err.code === "SESSAO_EXPIRADA") _notifySessionExpired(err.message);
-    _reportMutationError(err);
-    return false;
-  }
-}
 function setLoading(visible) {
   const el = document.getElementById("loadingOverlay");
   if (el) el.style.display = visible ? "flex" : "none";
@@ -145,7 +130,7 @@ async function loadCollectionData(sheetName, dataArray, renderFn) {
           r[field] = Number.isFinite(value) ? value : 0;
         } else if (r[field] === "") r[field] = 0;
       });
-      r["Incluir"] = _normalizeIncluir(r["Incluir"]);
+      delete r["Incluir"];
       return r;
     });
     dataArray.splice(0, dataArray.length, ...normalized);

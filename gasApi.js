@@ -1,5 +1,5 @@
 /* Cliente da API do Pokémon TCG Dashboard. O token de sessão existe somente em memória. */
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxMpZ9trVXmHsjUZc5sK3RH_dvnly9UQltV-fC4M2KcD3Y6sbm5dly22vQNgXAIkdMB/exec";
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxWInn7OkulWMoJmIDMa0PkT0h-EErTqS2AlQIwt6vS1GJeCLAhc03eOpQ6Wz06XGnC/exec";
 let _currentUser = null;
 let _sessionToken = null;
 const _loadRequests = new WeakMap();
